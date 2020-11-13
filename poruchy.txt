@@ -1,0 +1,13 @@
+den - 1440 minut - exp rozložení s tímto středem pro generování poruchy
+všechny poruchy generovány se stejným středem
+liší se doba zastavení výroby - jeden příchod = doba odstávky za rok / 365
+
+druh:			za rok:		jeden příchod:		nejčastější místo výroby:
+
+A nepozornost obsluhy 	- 400 min	-1.1 min		konfekce/míchárna
+B mechanická závada 	- 200 min	-0.55 min		vulkanizace/válcovna
+C elektro závada 	- 100 min	-0.27 min		any
+D HW nebo SW závada 	- 1400 min 	-3.84 min		míchárna
+E nesprávné nastavení 	- 80 min	-0.22 min		vulkan/konf
+F únik médií 		- 500 min	-1.37 min		konf/vulkan
+G jiné 			- 350 min	-0.96 min		konfekce
