@@ -1,257 +1,558 @@
-#include "vyroba.h"
-#include "poruchy.h"
-#include "smeny.h"
+#include <string>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h> 
+#include <unistd.h>
+#include <ctype.h>
+#include <vector>
+#include <simlib.h>
+#include <getopt.h>
+#include <string.h>
 
+#define obsluhaHWSW 3.84
+#define obsluhaUnik 1.37
+#define obsluhaObsluha 1.1
+#define obsluhaJine 0.96
+#define obsluhaMech 0.55
+#define obsluhaEl 0.27
+#define obsluhaNastav 0.22
 
-void HotovyVyrobek::Behavior() {
-    Seize(Kontrola);
-    Wait(tKontrola);
-    Release(Kontrola);
-    transakce++;
-}
+// linky
+Facility Micharna1("Micharna 1. stupen");
+Facility Micharna2("Micharna 2. stupen");
+Facility ValcovnaKordy("Pripravna kordu");
+Facility ValcovnaLana("Pripravna lana");
+Facility ValcovnaBehoun("Pripravna behounu");
+Facility ValcovnaBocnice("Pripravna bocnice");
+Facility Konfekce("Konfekce");
+Facility Vulkanizace("Vulkanizace");
+Facility Kontrola("Kontrola kvality");
 
+//casy behu linek
+double tMicharna1 = 266;
+double tMicharna2 = 193;
+double tKordy = 117;
+double tLana = 57;
+double tBehouny = 102;
+double tBocnice = 94;
+double tKonfekce = 74;
+double tVulkanizace = 119;
+double tKontrola = 15;
 
-void Karkas::Behavior() {
-    //sklad pro vulkanizaci
-    Wait(360);
+// polotovary
+int kordy, lana, behouny, bocnice = 0;
 
-    Seize(Vulkanizace);
-    Porucha();
-    Wait(tVulkanizace);
-    Release(Vulkanizace);
+// pocitadlo transakci
+int transakce = 0;
+int stopcount = INT32_MAX;
 
-    (new HotovyVyrobek)->Activate();
-}
+// poruchy
+bool poruchaMicharna1, poruchaMicharna2 = false;
+bool poruchaKordy, poruchaLana, poruchaBehoun, poruchaBocnice = false;
+bool poruchaKonfekceObsluha, poruchaKonfekceJine = false;
+bool poruchaVulkanizaceUnik, poruchaVulkanizaceNastaveni = false;
+bool poruchaMichEl1, poruchaMichEl2, poruchaLanEl, poruchaKordEl, poruchaBocEl, poruchaBehEl, poruchaKonfEl, poruchaVulkEl = false;
 
-void Karkas::Porucha() {
-    if (poruchaVulkanizaceNastaveni) {
-        Wait(obsluhaNastav);
-        poruchaVulkanizaceNastaveni = false;
+class PoruchaHWSW : public Event {
+    void Behavior() {
+
+        if (Random() < 0.5)
+            poruchaMicharna1 = true;
+        else
+            poruchaMicharna2 = true;
+
+        (new PoruchaHWSW)->Activate(Time+Exponential(1440));
     }
-    if (poruchaVulkanizaceUnik) {
-        Wait(obsluhaUnik);
-        poruchaVulkanizaceUnik = false;
+};
+
+class PoruchaUnik : public Event {
+    void Behavior() {
+        
+        poruchaVulkanizaceUnik = true;
+        (new PoruchaUnik)->Activate(Time+Exponential(1440));
     }
-    if (poruchaVulkEl) {
-        Wait(obsluhaEl);
-        poruchaVulkEl = false;
+};
+
+class PoruchaObsluha : public Event {
+    void Behavior() {
+        
+        poruchaKonfekceObsluha = true;
+        (new PoruchaObsluha)->Activate(Time+Exponential(1440));
     }
-}
+};
 
-
-void PolotovaryKonfekce::Behavior() {
-    Seize(Konfekce);
-    Porucha();
-    Wait(tKonfekce);
-    Release(Konfekce);
-
-    (new Karkas)->Activate();
-}
-
-void PolotovaryKonfekce::Porucha() {
-    if (poruchaKonfekceJine) {
-        Wait(obsluhaJine);
-        poruchaKonfekceJine = false;
+class PoruchaJine : public Event {
+    void Behavior() {
+        
+        poruchaKonfekceJine = true;
+        (new PoruchaJine)->Activate(Time+Exponential(1440));
     }
-    if (poruchaKonfekceObsluha) {
-        Wait(obsluhaObsluha);
-        poruchaKonfekceObsluha = false;
+};
+
+class PoruchaMechanicka : public Event {
+    void Behavior() {
+        
+        double rnd = Random();
+
+        if (rnd < 0.25)
+            poruchaKordy = true;
+        else if (rnd < 0.5)
+            poruchaLana = true;
+        else if (rnd < 0.75)
+            poruchaBehoun = true;
+        else 
+            poruchaBocnice = true;
+
+        (new PoruchaMechanicka)->Activate(Time+Exponential(1440));
     }
-    if (poruchaKonfEl) {
-        Wait(obsluhaEl);
-        poruchaKonfEl = false;
+};
+
+class PoruchaElektro : public Event {
+    void Behavior() {
+        poruchaMichEl1 = true;
+        poruchaMichEl2 = true;
+        poruchaLanEl = true;
+        poruchaKordEl = true;
+        poruchaBocEl = true;
+        poruchaBehEl = true;
+        poruchaKonfEl = true;
+        poruchaVulkEl = true;
+
+        (new PoruchaElektro)->Activate(Time+Exponential(1440));
     }
-}
+};
 
+class PoruchaNastaveni : public Event {
+    void Behavior() {
+        poruchaVulkanizaceNastaveni = true;
 
-void BeginKonfekce::Behavior() {
-    if (kordy > 0 && lana > 0 && behouny > 0 && bocnice > 0) {
-        kordy--; lana--; behouny--; bocnice--;
-        (new PolotovaryKonfekce)->Activate();
+        (new PoruchaNastaveni)->Activate(Time+Exponential(1440));
     }
-}
+};
 
-
-void PripravaBehoun::Behavior() {
-    // navezeni ze skladu
-    Wait(15);
-
-    Seize(ValcovnaBehoun);
-    Porucha();
-    Wait(tBehouny);
-    Release(ValcovnaBehoun);
-    Wait(1140);
-    
-    behouny++;
-    (new BeginKonfekce)->Activate();
-}
-
-void PripravaBehoun::Porucha() {
-    if (poruchaBehoun) {
-        Wait(obsluhaMech);
-        poruchaBehoun = false;
+class Poruchy : public Event {
+    void Behavior() {
+        (new PoruchaHWSW)->Activate(Time+Exponential(1440));
+        (new PoruchaUnik)->Activate(Time+Exponential(1440));
+        (new PoruchaObsluha)->Activate(Time+Exponential(1440));
+        (new PoruchaJine)->Activate(Time+Exponential(1440));
+        (new PoruchaMechanicka)->Activate(Time+Exponential(1440));
+        (new PoruchaElektro)->Activate(Time+Exponential(1440));
+        (new PoruchaNastaveni)->Activate(Time+Exponential(1440));
     }
-    if (poruchaBehEl) {
-        Wait(obsluhaEl);
-        poruchaBehEl = false;
+};
+
+class GenSmenMicharna1 : public Process {
+public:
+    double Interval;
+
+    GenSmenMicharna1(double interv) {
+        Interval = interv;
     }
-}
 
+    void Behavior() {
+        Seize(Micharna1, 1);
 
-void PripravaBocnice::Behavior() {
-    // navezeni ze skladu
-    Wait(14);
+        Wait(1440-Interval);
 
-    Seize(ValcovnaBocnice);
-    Porucha();
-    Wait(tBocnice);
-    Release(ValcovnaBocnice);
-    Wait(1020);
+        Release(Micharna1);
 
-    bocnice++;
-    (new BeginKonfekce)->Activate();
-}
-
-void PripravaBocnice::Porucha() {
-    if (poruchaBocnice) {
-        Wait(obsluhaMech);
-        poruchaBocnice = false;
+        (new GenSmenMicharna1(Interval))->Activate(Time + Interval);
     }
-    if (poruchaBocEl) {
-        Wait(obsluhaEl);
-        poruchaBocEl = false;
+};
+
+class GenSmenMicharna2 : public Process {
+public:
+    double Interval;
+
+    GenSmenMicharna2(double interv) {
+        Interval = interv;
     }
-}
 
+    void Behavior() {
+        Seize(Micharna2, 1);
 
-void PripravaKordu::Behavior() {
-    // navezeni ze skladu
-    Wait(18);
+        Wait(1440-Interval);
 
-    Seize(ValcovnaKordy);
-    Porucha();
-    Wait(tKordy);
-    Release(ValcovnaKordy);
-    Wait(1200);
+        Release(Micharna2);
 
-    kordy++;
-    (new BeginKonfekce)->Activate();
-}
-
-void PripravaKordu::Porucha() {
-    if (poruchaKordy) {
-        Wait(obsluhaMech);
-        poruchaKordy = false;
+        (new GenSmenMicharna2(Interval))->Activate(Time + Interval);
     }
-    if (poruchaKordEl) {
-        Wait(obsluhaEl);
-        poruchaKordEl = false;
+};
+
+class GenSmenKordy : public Process {
+public:
+    double Interval;
+
+    GenSmenKordy(double interv) {
+        Interval = interv;
     }
-}
 
+    void Behavior() {
+        Seize(ValcovnaKordy, 1);
 
-void PripravaLana::Behavior() {
-    // navezeni ze skladu
-    Wait(35);
+        Wait(1440-Interval);
 
-    Seize(ValcovnaLana);
-    Porucha();
-    Wait(tLana);
-    Release(ValcovnaLana);
-    Wait(1020);
+        Release(ValcovnaKordy);
 
-    lana++;
-    (new BeginKonfekce)->Activate();
-}
-
-void PripravaLana::Porucha() {
-    if (poruchaLana) {
-        Wait(obsluhaMech);
-        poruchaLana = false;
+        (new GenSmenKordy(Interval))->Activate(Time + Interval);
     }
-    if (poruchaLanEl) {
-        Wait(obsluhaEl);
-        poruchaLanEl = false;
+};
+
+class GenSmenLana : public Process {
+public:
+    double Interval;
+
+    GenSmenLana(double interv) {
+        Interval = interv;
     }
-}
 
+    void Behavior() {
+        Seize(ValcovnaLana, 1);
 
-void SmesProValcovnu::Behavior() {
-    Wait(1440);
+        Wait(1440-Interval);
 
-    (new PripravaKordu)->Activate();
-    (new PripravaLana)->Activate();
-    (new PripravaBehoun)->Activate();
-    (new PripravaBocnice)->Activate();
-}
+        Release(ValcovnaLana);
 
-void SurProDruhyStupen::Behavior() {
-    //cekani ve sklade
-    Wait(360);
-    Seize(Micharna2);
-    Porucha();
-    Wait(tMicharna2);
-    Release(Micharna2);
-
-    (new SmesProValcovnu)->Activate();
-}
-
-void SurProDruhyStupen::Porucha() {
-    if (poruchaMicharna2) {
-        Wait(obsluhaHWSW);
-        poruchaMicharna2 = false;
+        (new GenSmenLana(Interval))->Activate(Time + Interval);
     }
-    if (poruchaMichEl2) {
-        Wait(obsluhaEl);
-        poruchaMichEl2 = false;
+};
+
+
+class GenSmenBehoun : public Process {
+public:
+    double Interval;
+
+    GenSmenBehoun(double interv) {
+        Interval = interv;
     }
-}
 
-void Suroviny::Behavior() {
-    Seize(Micharna1);
-    Porucha();
-    Wait(tMicharna1);
-    Release(Micharna1);
+    void Behavior() {
+        Seize(ValcovnaBehoun, 1);
 
-    (new Suroviny)->Activate();
-    (new SurProDruhyStupen)->Activate();
-}
+        Wait(1440-Interval);
 
-void Suroviny::Porucha() {
-    if (poruchaMicharna1) {
-        Wait(obsluhaHWSW);
-        poruchaMicharna1 = false;
+        Release(ValcovnaBehoun);
+
+        (new GenSmenBehoun(Interval))->Activate(Time + Interval);
     }
-    if (poruchaMichEl1) {
-        Wait(obsluhaEl);
-        poruchaMichEl1 = false;
+};
+
+class GenSmenBocnice : public Process {
+public:
+    double Interval;
+
+    GenSmenBocnice(double interv) {
+        Interval = interv;
     }
-}
+
+    void Behavior() {
+        Seize(ValcovnaBocnice, 1);
+
+        Wait(1440-Interval);
+
+        Release(ValcovnaBocnice);
+
+        (new GenSmenBocnice(Interval))->Activate(Time + Interval);
+    }
+};
+
+class GenSmenKonfekce: public Process {
+public:
+    double Interval;
+
+    GenSmenKonfekce(double interv) {
+        Interval = interv;
+    }
+
+    void Behavior() {
+        Seize(Konfekce, 1);
+
+        Wait(1440-Interval);
+
+        Release(Konfekce);
+
+        (new GenSmenKonfekce(Interval))->Activate(Time + Interval);
+    }
+};
+
+class GenSmenKontrola : public Process {
+public:
+    double Interval;
+
+    GenSmenKontrola(double interv) {
+        Interval = interv;
+    }
+
+    void Behavior() {
+        Seize(Kontrola, 1);
+
+        Wait(1440-Interval);
+
+        Release(Kontrola);
+
+        (new GenSmenKontrola(Interval))->Activate(Time + Interval);
+    }
+};
+
+class GenSmenVulkanizace : public Process {
+public:
+    double Interval;
+
+    GenSmenVulkanizace(double interv) {
+        Interval = interv;
+    }
+
+    void Behavior() {
+        Seize(Vulkanizace, 1);
+
+        Wait(1440-Interval);
+
+        Release(Vulkanizace);
+
+        (new GenSmenVulkanizace(Interval))->Activate(Time + Interval);
+    }
+};
 
 
-void printStats() {
+class HotovyVyrobek : public Process {
+    void Behavior() {
+        Seize(Kontrola);
+        Wait(tKontrola);
+        Release(Kontrola);
+        transakce++;
 
-    printf("Micharna:--------------------------------------------------\n\n");
-    Micharna1.Output();
-    Micharna2.Output();
-    printf("Micharna---konec:------------------------------------------\n\n");
+        if (transakce >= stopcount) {
+            Stop();
+        }
+    }
+};
 
-    printf("Valcovna:--------------------------------------------------\n\n");
-    ValcovnaKordy.Output();
-    ValcovnaLana.Output();
-    ValcovnaBehoun.Output();
-    ValcovnaBocnice.Output();
-    printf("Valcovna---konec-------------------------------------------\n\n");
+class Karkas : public Process {
+    void Behavior() {
+        //sklad pro vulkanizaci
+        Wait(360);
 
-    Konfekce.Output();
+        Seize(Vulkanizace);
+        Porucha();
+        Wait(tVulkanizace);
+        Release(Vulkanizace);
 
-    Vulkanizace.Output();
+        (new HotovyVyrobek)->Activate();
+    }
+    void Porucha() {
+        if (poruchaVulkanizaceNastaveni) {
+            Wait(obsluhaNastav);
+            poruchaVulkanizaceNastaveni = false;
+        }
+        if (poruchaVulkanizaceUnik) {
+            Wait(obsluhaUnik);
+            poruchaVulkanizaceUnik = false;
+        }
+        if (poruchaVulkEl) {
+            Wait(obsluhaEl);
+            poruchaVulkEl = false;
+        }
+    }
+};
 
-    Kontrola.Output();
+class PolotovaryKonfekce : public Process {
+    void Behavior() {
+        Seize(Konfekce);
+        Porucha();
+        Wait(tKonfekce);
+        Release(Konfekce);
 
-    std::cout << "\nDokoncene transakce:" + std::to_string(transakce) + "\n";
+        (new Karkas)->Activate();
+    }
+    void Porucha() {
+        if (poruchaKonfekceJine) {
+            Wait(obsluhaJine);
+            poruchaKonfekceJine = false;
+        }
+        if (poruchaKonfekceObsluha) {
+            Wait(obsluhaObsluha);
+            poruchaKonfekceObsluha = false;
+        }
+        if (poruchaKonfEl) {
+            Wait(obsluhaEl);
+            poruchaKonfEl = false;
+        }
+    }
+};
 
-}
+class BeginKonfekce : public Process {
+    void Behavior() {
+        if (kordy > 0 && lana > 0 && behouny > 0 && bocnice > 0) {
+            kordy--; lana--; behouny--; bocnice--;
+            (new PolotovaryKonfekce)->Activate();
+        }
+    }
+};
+
+class PripravaBehoun : public Process {
+    void Behavior() {
+        // navezeni ze skladu
+        Wait(15);
+
+        Seize(ValcovnaBehoun);
+        Porucha();
+        Wait(tBehouny);
+        Release(ValcovnaBehoun);
+
+        Wait(1140);
+        behouny++;
+        (new BeginKonfekce)->Activate();
+    }
+    void Porucha() {
+        if (poruchaBehoun) {
+            Wait(obsluhaMech);
+            poruchaBehoun = false;
+        }
+        if (poruchaBehEl) {
+            Wait(obsluhaEl);
+            poruchaBehEl = false;
+        }
+    }
+};
+
+class PripravaBocnice : public Process {
+    void Behavior() {
+        // navezeni ze skladu
+        Wait(14);
+
+        Seize(ValcovnaBocnice);
+        Porucha();
+        Wait(tBocnice);
+        Release(ValcovnaBocnice);
+
+        Wait(1020);
+        bocnice++;
+        (new BeginKonfekce)->Activate();
+    }
+    void Porucha() {
+        if (poruchaBocnice) {
+            Wait(obsluhaMech);
+            poruchaBocnice = false;
+        }
+        if (poruchaBocEl) {
+            Wait(obsluhaEl);
+            poruchaBocEl = false;
+        }
+    }
+};
+
+class PripravaKordu : public Process {
+    void Behavior() {
+        // navezeni ze skladu
+        Wait(18);
+
+        Seize(ValcovnaKordy);
+        Porucha();
+        Wait(tKordy);
+        Release(ValcovnaKordy);
+
+        Wait(1200);
+        kordy++;
+        (new BeginKonfekce)->Activate();
+    }
+    void Porucha() {
+        if (poruchaKordy) {
+            Wait(obsluhaMech);
+            poruchaKordy = false;
+        }
+        if (poruchaKordEl) {
+            Wait(obsluhaEl);
+            poruchaKordEl = false;
+        }
+    }
+};
+
+class PripravaLana : public Process {
+    void Behavior() {
+        // navezeni ze skladu
+        Wait(35);
+
+        Seize(ValcovnaLana);
+        Porucha();
+        Wait(tLana);
+        Release(ValcovnaLana);
+
+        Wait(1020);
+        lana++;
+        (new BeginKonfekce)->Activate();
+    }
+    void Porucha() {
+        if (poruchaLana) {
+            Wait(obsluhaMech);
+            poruchaLana = false;
+        }
+        if (poruchaLanEl) {
+            Wait(obsluhaEl);
+            poruchaLanEl = false;
+        }
+    }
+};
+
+class SmesProValcovnu : public Process {
+    void Behavior() {
+        Wait(1440);
+
+        (new PripravaKordu)->Activate();
+        (new PripravaLana)->Activate();
+        (new PripravaBehoun)->Activate();
+        (new PripravaBocnice)->Activate();
+    }
+};
+
+class SurProDruhyStupen : public Process {
+    void Behavior() {
+        //cekani ve sklade
+        Wait(360);
+
+        Seize(Micharna2);
+        Porucha();
+        Wait(tMicharna2);
+        Release(Micharna2);
+
+        (new SmesProValcovnu)->Activate();
+    }
+
+    void Porucha() {
+        if (poruchaMicharna2) {
+            Wait(obsluhaHWSW);
+            poruchaMicharna2 = false;
+        }
+        if (poruchaMichEl2) {
+            Wait(obsluhaEl);
+            poruchaMichEl2 = false;
+        }
+    }
+};
+
+class Suroviny : public Process {
+    void Behavior() {
+
+        Seize(Micharna1);
+        Porucha();
+        Wait(tMicharna1);
+        Release(Micharna1);
+
+        (new Suroviny)->Activate();
+        (new SurProDruhyStupen)->Activate();
+    }
+
+    void Porucha() {
+        if (poruchaMicharna1) {
+            Wait(obsluhaHWSW);
+            poruchaMicharna1 = false;
+        }
+        if (poruchaMichEl1) {
+            Wait(obsluhaEl);
+            poruchaMichEl1 = false;
+        }
+    }
+};
 
 void printStatsMini() {
     std::cout << "Vyuziti Micharny 1. stupne: " + std::to_string(Micharna1.tstat.MeanValue()) + "\n";
@@ -263,7 +564,38 @@ void printStatsMini() {
     std::cout << "Vyuziti Konfekce: " + std::to_string(Konfekce.tstat.MeanValue()) + "\n";
     std::cout << "Vyuziti Vulkanizace: " + std::to_string(Vulkanizace.tstat.MeanValue()) + "\n";
     std::cout << "Vyuziti Kontroly: " + std::to_string(Kontrola.tstat.MeanValue()) + "\n";
-    std::cout << "\nDokoncene transakce:" + std::to_string(transakce) + "\n";
+    std::cout << "\nDokoncene transakce :" + std::to_string(transakce) + "\n";
+
+    if (stopcount < INT32_MAX) {
+        std::cout << "Cas dokonceni davky transakci: " << Time / 60 / 24 << " dní (" << Time << " minut).\n";
+    }
+}
+
+void printStats(bool verbose) {
+
+    if (verbose) {
+
+        printf("Micharna:--------------------------------------------------\n\n");
+        Micharna1.Output();
+        Micharna2.Output();
+        printf("Micharna---konec:------------------------------------------\n\n");
+
+        printf("Valcovna:--------------------------------------------------\n\n");
+        ValcovnaKordy.Output();
+        ValcovnaLana.Output();
+        ValcovnaBehoun.Output();
+        ValcovnaBocnice.Output();
+        printf("Valcovna---konec-------------------------------------------\n\n");
+
+        Konfekce.Output();
+
+        Vulkanizace.Output();
+
+        Kontrola.Output();
+    }
+
+    printStatsMini();
+
 }
 
 void get_args(int argc, char *argv[], double *smenaMicharna1, double* smenaMicharna2, double* smenaKordy, double* smenaLana,\
@@ -274,13 +606,14 @@ void get_args(int argc, char *argv[], double *smenaMicharna1, double* smenaMicha
 if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
     // todo USE
     std::cout << "Pouziti:\n\n";
-    std::cout << "-t/-time ......... delka behu simulace (pocet dni)\n";
-    std::cout << "-v/-verbose ...... vypis vsech informaci o linkach\n";
-    std::cout << "-x/-bezporuch .... beh simulace bez poruch \n\n";
+    std::cout << "-t/-time [dni] ......... delka behu simulace (pocet dni)\n";
+    std::cout << "-v/-verbose ............ vypis vsech informaci o linkach\n";
+    std::cout << "-x/-bezporuch .......... beh simulace bez poruch \n";
+    std::cout << "-s/stop [transakci] .... zastavi beh simulace po propusteni zadaneho poctu \n";
     std::cout << "-[linka] [delka smeny v minutach]\n";
     std::cout << "linky: micharna1/a , micharna2/b, kordy/c, lana/d, behouny/e,\n";
     std::cout << "bocnice/f, konfekce/g, vulkanizace/h, kontrola/i\n\n";
-    std::cout << "Casy behu linek: t[linka]/[j-r] [cas behu v minutach]";
+    std::cout << "-t[linka]/[j-r] [doba obsluhy v minutach] Zmena doby obsluhy linky";
     exit(0);
 }
 
@@ -309,6 +642,7 @@ if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
         {"verbose", no_argument, NULL, 'v'},
         {"bezporuch", no_argument, NULL, 'x'},
         {"time", required_argument, NULL, 't'},
+        {"stop", required_argument, NULL, 's'},
         {0, 0, 0, 0}
     };
 
@@ -320,7 +654,7 @@ if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
 
     while (1)
     {
-        c = getopt_long_only(argc,argv, "a:b:c:d:e:f:g:h:i:0vxt:", long_options, &opt_index);
+        c = getopt_long_only(argc,argv, "a:b:c:d:e:f:g:h:i:0vxt:s:", long_options, &opt_index);
 
         if(c == -1) //end of args
             break;
@@ -341,9 +675,9 @@ if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
             }
 
 
-            if(c != 't' && (val < 0 || val >= 1440))
+            if(c != 't' && c != 's' && (val <= 0 || val > 1440))
             {
-                std::cerr << "Nevhodna hodnota argumentu: " << optarg << " ...musi byt mezi 0-1439\n";
+                std::cerr << "Nevhodna hodnota argumentu: " << optarg << " ...musi byt mezi 0-1440\n";
                 exit(1);
             }
         }
@@ -457,6 +791,11 @@ if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
             *timespan = val * 1440;
             break;
 
+        case 's':
+            std::cout << "pozadovany pocet transakci nastaven na: " << val << "\n";
+            stopcount = val;
+            break;
+
         default:
             exit(1);
         }
@@ -517,10 +856,7 @@ int main(int argc, char* argv[]) {
     Run();
 
     // print stats
-    if (verbose) 
-        printStats();
-    else 
-        printStatsMini();
+    printStats(verbose);
 
     return EXIT_SUCCESS;
 }
