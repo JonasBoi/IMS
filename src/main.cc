@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <string.h>
 
+// doby obsluhy poruch
 #define obsluhaHWSW 3.84
 #define obsluhaUnik 1.37
 #define obsluhaObsluha 1.1
@@ -46,13 +47,19 @@ int kordy, lana, behouny, bocnice = 0;
 int transakce = 0;
 int stopcount = INT32_MAX;
 
-// poruchy
+// indikatory poruch
 bool poruchaMicharna1, poruchaMicharna2 = false;
 bool poruchaKordy, poruchaLana, poruchaBehoun, poruchaBocnice = false;
 bool poruchaKonfekceObsluha, poruchaKonfekceJine = false;
 bool poruchaVulkanizaceUnik, poruchaVulkanizaceNastaveni = false;
 bool poruchaMichEl1, poruchaMichEl2, poruchaLanEl, poruchaKordEl, poruchaBocEl, poruchaBehEl, poruchaKonfEl, poruchaVulkEl = false;
 
+
+/*
+ * =====================================          poruchy          ====================================
+ */
+
+// udalost poruchy hw
 class PoruchaHWSW : public Event {
     void Behavior() {
 
@@ -65,6 +72,8 @@ class PoruchaHWSW : public Event {
     }
 };
 
+
+// udalost poruchy uniku medii
 class PoruchaUnik : public Event {
     void Behavior() {
         
@@ -73,6 +82,8 @@ class PoruchaUnik : public Event {
     }
 };
 
+
+// udalost poruchy nepozornosti obsluhy
 class PoruchaObsluha : public Event {
     void Behavior() {
         
@@ -81,6 +92,8 @@ class PoruchaObsluha : public Event {
     }
 };
 
+
+// udalost poruchy kategorie jine
 class PoruchaJine : public Event {
     void Behavior() {
         
@@ -89,6 +102,8 @@ class PoruchaJine : public Event {
     }
 };
 
+
+// udalost poruchy mechanicke zavady
 class PoruchaMechanicka : public Event {
     void Behavior() {
         
@@ -107,6 +122,8 @@ class PoruchaMechanicka : public Event {
     }
 };
 
+
+// udalost poruchy elektricke zavady
 class PoruchaElektro : public Event {
     void Behavior() {
         poruchaMichEl1 = true;
@@ -122,6 +139,8 @@ class PoruchaElektro : public Event {
     }
 };
 
+
+// udalost poruchy nastaveni
 class PoruchaNastaveni : public Event {
     void Behavior() {
         poruchaVulkanizaceNastaveni = true;
@@ -130,6 +149,8 @@ class PoruchaNastaveni : public Event {
     }
 };
 
+
+// udalost pro pocatek generovani poruch
 class Poruchy : public Event {
     void Behavior() {
         (new PoruchaHWSW)->Activate(Time+Exponential(1440));
@@ -142,6 +163,11 @@ class Poruchy : public Event {
     }
 };
 
+/*
+ * =====================================          SMENY          ====================================
+ */
+
+// proces konce smeny micharna1
 class GenSmenMicharna1 : public Process {
 public:
     double Interval;
@@ -161,6 +187,8 @@ public:
     }
 };
 
+
+// proces konce smeny micharna2
 class GenSmenMicharna2 : public Process {
 public:
     double Interval;
@@ -180,6 +208,8 @@ public:
     }
 };
 
+
+// proces konce smeny valcovna1
 class GenSmenKordy : public Process {
 public:
     double Interval;
@@ -199,6 +229,8 @@ public:
     }
 };
 
+
+// proces konce smeny valcovna2
 class GenSmenLana : public Process {
 public:
     double Interval;
@@ -219,6 +251,7 @@ public:
 };
 
 
+// proces konce smeny valcovna3
 class GenSmenBehoun : public Process {
 public:
     double Interval;
@@ -238,6 +271,8 @@ public:
     }
 };
 
+
+// proces konce smeny valcovna4
 class GenSmenBocnice : public Process {
 public:
     double Interval;
@@ -257,6 +292,8 @@ public:
     }
 };
 
+
+// proces konce smeny konfekce
 class GenSmenKonfekce: public Process {
 public:
     double Interval;
@@ -276,6 +313,8 @@ public:
     }
 };
 
+
+// proces konce smeny kontroly
 class GenSmenKontrola : public Process {
 public:
     double Interval;
@@ -295,6 +334,8 @@ public:
     }
 };
 
+
+// proces konce smeny vulkanizace
 class GenSmenVulkanizace : public Process {
 public:
     double Interval;
@@ -315,8 +356,14 @@ public:
 };
 
 
+/*
+ * =====================================         VYROBA         ====================================
+ */
+
+// proces kontroly vyrobku
 class HotovyVyrobek : public Process {
     void Behavior() {
+
         Seize(Kontrola);
         Wait(tKontrola);
         Release(Kontrola);
@@ -328,6 +375,8 @@ class HotovyVyrobek : public Process {
     }
 };
 
+
+// proces vulkanizace karkasu
 class Karkas : public Process {
     void Behavior() {
         //sklad pro vulkanizaci
@@ -356,8 +405,11 @@ class Karkas : public Process {
     }
 };
 
+
+// proces konfekce polotovaru
 class PolotovaryKonfekce : public Process {
     void Behavior() {
+
         Seize(Konfekce);
         Porucha();
         Wait(tKonfekce);
@@ -365,7 +417,9 @@ class PolotovaryKonfekce : public Process {
 
         (new Karkas)->Activate();
     }
+
     void Porucha() {
+
         if (poruchaKonfekceJine) {
             Wait(obsluhaJine);
             poruchaKonfekceJine = false;
@@ -381,7 +435,10 @@ class PolotovaryKonfekce : public Process {
     }
 };
 
+
+// proces zjistujici dostupnost polotovaru pro konfekci
 class BeginKonfekce : public Process {
+
     void Behavior() {
         if (kordy > 0 && lana > 0 && behouny > 0 && bocnice > 0) {
             kordy--; lana--; behouny--; bocnice--;
@@ -390,7 +447,10 @@ class BeginKonfekce : public Process {
     }
 };
 
+
+// proces pripravy behounu
 class PripravaBehoun : public Process {
+
     void Behavior() {
         // navezeni ze skladu
         Wait(15);
@@ -404,6 +464,7 @@ class PripravaBehoun : public Process {
         behouny++;
         (new BeginKonfekce)->Activate();
     }
+
     void Porucha() {
         if (poruchaBehoun) {
             Wait(obsluhaMech);
@@ -416,7 +477,10 @@ class PripravaBehoun : public Process {
     }
 };
 
+
+// proces pripravy bocnice
 class PripravaBocnice : public Process {
+    
     void Behavior() {
         // navezeni ze skladu
         Wait(14);
@@ -430,6 +494,7 @@ class PripravaBocnice : public Process {
         bocnice++;
         (new BeginKonfekce)->Activate();
     }
+
     void Porucha() {
         if (poruchaBocnice) {
             Wait(obsluhaMech);
@@ -442,7 +507,10 @@ class PripravaBocnice : public Process {
     }
 };
 
+
+// proces pripravy kordu
 class PripravaKordu : public Process {
+
     void Behavior() {
         // navezeni ze skladu
         Wait(18);
@@ -456,6 +524,7 @@ class PripravaKordu : public Process {
         kordy++;
         (new BeginKonfekce)->Activate();
     }
+
     void Porucha() {
         if (poruchaKordy) {
             Wait(obsluhaMech);
@@ -468,7 +537,10 @@ class PripravaKordu : public Process {
     }
 };
 
+
+// proces pripravy lana
 class PripravaLana : public Process {
+
     void Behavior() {
         // navezeni ze skladu
         Wait(35);
@@ -482,6 +554,7 @@ class PripravaLana : public Process {
         lana++;
         (new BeginKonfekce)->Activate();
     }
+
     void Porucha() {
         if (poruchaLana) {
             Wait(obsluhaMech);
@@ -494,7 +567,10 @@ class PripravaLana : public Process {
     }
 };
 
+
+// proces startujici vyrobu ve valcovne
 class SmesProValcovnu : public Process {
+
     void Behavior() {
         Wait(1440);
 
@@ -505,7 +581,10 @@ class SmesProValcovnu : public Process {
     }
 };
 
+
+// proces hneteni 2. stupne
 class SurProDruhyStupen : public Process {
+
     void Behavior() {
         //cekani ve sklade
         Wait(360);
@@ -530,7 +609,10 @@ class SurProDruhyStupen : public Process {
     }
 };
 
+
+// proces hneteni prvniho stupne
 class Suroviny : public Process {
+    
     void Behavior() {
 
         Seize(Micharna1);
@@ -554,6 +636,11 @@ class Suroviny : public Process {
     }
 };
 
+/*
+ * =====================================          funkce          ====================================
+ */
+
+// funkce pro minimalisticky prehled statistik
 void printStatsMini() {
     std::cout << "Vyuziti Micharny 1. stupne: " + std::to_string(Micharna1.tstat.MeanValue()) + "\n";
     std::cout << "Vyuziti Micharny 2. stupne: " + std::to_string(Micharna2.tstat.MeanValue()) + "\n";
@@ -571,6 +658,8 @@ void printStatsMini() {
     }
 }
 
+
+//funkce pro tisk statistik
 void printStats(bool verbose) {
 
     if (verbose) {
@@ -598,26 +687,28 @@ void printStats(bool verbose) {
 
 }
 
+
+//funkce pro zpracovani argumentu
 void get_args(int argc, char *argv[], double *smenaMicharna1, double* smenaMicharna2, double* smenaKordy, double* smenaLana,\
             double* smenaBehouny, double* smenaBocnice, double* smenaKonfekce, double* smenaVulkanizace, double * smenaKontrola,
              bool * verbose, bool * poruchy, int* timespan)
 {
 
-if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
-    // todo USE
-    std::cout << "Pouziti:\n\n";
-    std::cout << "-t/-time [dni] ......... delka behu simulace (pocet dni)\n";
-    std::cout << "-v/-verbose ............ vypis vsech informaci o linkach\n";
-    std::cout << "-x/-bezporuch .......... beh simulace bez poruch \n";
-    std::cout << "-s/stop [transakci] .... zastavi beh simulace po propusteni zadaneho poctu \n";
-    std::cout << "-[linka] [delka smeny v minutach]\n";
-    std::cout << "linky: micharna1/a , micharna2/b, kordy/c, lana/d, behouny/e,\n";
-    std::cout << "bocnice/f, konfekce/g, vulkanizace/h, kontrola/i\n\n";
-    std::cout << "-t[linka]/[j-r] [doba obsluhy v minutach] Zmena doby obsluhy linky";
-    exit(0);
-}
+    if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
+        // todo USE
+        std::cout << "Pouziti:\n\n";
+        std::cout << "-t/-time [dni] ......... delka behu simulace (pocet dni)\n";
+        std::cout << "-v/-verbose ............ vypis vsech informaci o linkach\n";
+        std::cout << "-x/-bezporuch .......... beh simulace bez poruch \n";
+        std::cout << "-s/stop [transakci] .... zastavi beh simulace po propusteni zadaneho poctu \n";
+        std::cout << "-[linka] [delka smeny v minutach]\n";
+        std::cout << "linky: micharna1/a , micharna2/b, kordy/c, lana/d, behouny/e,\n";
+        std::cout << "bocnice/f, konfekce/g, vulkanizace/h, kontrola/i\n\n";
+        std::cout << "-t[linka]/[j-r] [doba obsluhy v minutach] Zmena doby obsluhy linky";
+        exit(0);
+    }
 
-//mozne argumenty
+    //mozne argumenty
     static struct option long_options[] =
     {
         {"", no_argument, NULL, '0'},
@@ -804,9 +895,10 @@ if (argc > 1 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-help"))) {
     std::cout << "\n";
 }
 
-
+// -------------------------------------------======== MAIN =========----------------------------------------------------
 int main(int argc, char* argv[]) {
 
+    // puvodni delka smen - 24h nonstop
     double smenaMicharna1 = 1440;
     double smenaMicharna2 = 1440;
     double smenaKordy = 1440;
@@ -816,10 +908,12 @@ int main(int argc, char* argv[]) {
     double smenaKonfekce = 1440;
     double smenaVulkanizace = 1440;
     double smenaKontrola = 1440;
-    bool verbose = false;
-    bool poruchy = true;
-    int timespan = 1440 * 365;
 
+    bool verbose = false; // implicitne strucny mod
+    bool poruchy = true; // implicitne poruchy zapnuty
+    int timespan = 1440 * 365; // implicitni timespan 1 rok
+
+    // zpracovani argumentu
     get_args(argc,argv, &smenaMicharna1, &smenaMicharna2, &smenaKordy, &smenaLana,
      &smenaBehouny, &smenaBocnice, &smenaKonfekce, &smenaVulkanizace, &smenaKontrola,
       &verbose, &poruchy, &timespan);
@@ -827,6 +921,7 @@ int main(int argc, char* argv[]) {
     // init timespan
     Init(0, timespan);
 
+    // zahajeni vyroby
     (new Suroviny)->Activate();
 
     //omezeni linek u kterych byla nastavena delka smeny
@@ -853,6 +948,7 @@ int main(int argc, char* argv[]) {
     if (poruchy)
         (new Poruchy)->Activate();
 
+    // zahajeni simulace
     Run();
 
     // print stats
