@@ -703,8 +703,8 @@ void get_args(int argc, char *argv[], double *smenaMicharna1, double* smenaMicha
         std::cout << "-s/stop [transakci] .... zastavi beh simulace po propusteni zadaneho poctu \n";
         std::cout << "-[linka] [delka smeny v minutach]\n";
         std::cout << "linky: micharna1/a , micharna2/b, kordy/c, lana/d, behouny/e,\n";
-        std::cout << "bocnice/f, konfekce/g, vulkanizace/h, kontrola/i\n\n";
-        std::cout << "-t[linka]/[j-r] [doba obsluhy v minutach] Zmena doby obsluhy linky";
+        std::cout << "bocnice/f, konfekce/g, vulkanizace/h, kontrola/i\n";
+        std::cout << "-t[linka]/[j-r] [doba obsluhy v minutach] Zmena doby obsluhy linky\n\n";
         exit(0);
     }
 
