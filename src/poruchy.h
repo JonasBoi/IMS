@@ -1,91 +1,41 @@
-#include "main.h"
+#include <simlib.h>
+
+// poruchy
+bool poruchaMicharna1, poruchaMicharna2 = false;
+bool poruchaKordy, poruchaLana, poruchaBehoun, poruchaBocnice = false;
+bool poruchaKonfekceObsluha, poruchaKonfekceJine = false;
+bool poruchaVulkanizaceUnik, poruchaVulkanizaceNastaveni = false;
+bool poruchaMichEl1, poruchaMichEl2, poruchaLanEl, poruchaKordEl, poruchaBocEl, poruchaBehEl, poruchaKonfEl, poruchaVulkEl = false;
 
 
 class PoruchaHWSW : public Event {
-    void Behavior() {
-
-        if (Random() < 0.5)
-            poruchaMicharna1 = true;
-        else
-            poruchaMicharna2 = true;
-
-        (new PoruchaHWSW)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaUnik : public Event {
-    void Behavior() {
-        
-        poruchaVulkanizaceUnik = true;
-        (new PoruchaUnik)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaObsluha : public Event {
-    void Behavior() {
-        
-        poruchaKonfekceObsluha = true;
-        (new PoruchaObsluha)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaJine : public Event {
-    void Behavior() {
-        
-        poruchaKonfekceJine = true;
-        (new PoruchaJine)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaMechanicka : public Event {
-    void Behavior() {
-        
-        double rnd = Random();
-
-        if (rnd < 0.25)
-            poruchaKordy = true;
-        else if (rnd < 0.5)
-            poruchaLana = true;
-        else if (rnd < 0.75)
-            poruchaBehoun = true;
-        else 
-            poruchaBocnice = true;
-
-        (new PoruchaMechanicka)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaElektro : public Event {
-    void Behavior() {
-        poruchaMichEl1 = true;
-        poruchaMichEl2 = true;
-        poruchaLanEl = true;
-        poruchaKordEl = true;
-        poruchaBocEl = true;
-        poruchaBehEl = true;
-        poruchaKonfEl = true;
-        poruchaVulkEl = true;
-
-        (new PoruchaElektro)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class PoruchaNastaveni : public Event {
-    void Behavior() {
-        poruchaVulkanizaceNastaveni = true;
-
-        (new PoruchaNastaveni)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
 
 class Poruchy : public Event {
-    void Behavior() {
-        (new PoruchaHWSW)->Activate(Time+Exponential(1440));
-        (new PoruchaUnik)->Activate(Time+Exponential(1440));
-        (new PoruchaObsluha)->Activate(Time+Exponential(1440));
-        (new PoruchaJine)->Activate(Time+Exponential(1440));
-        (new PoruchaMechanicka)->Activate(Time+Exponential(1440));
-        (new PoruchaElektro)->Activate(Time+Exponential(1440));
-        (new PoruchaNastaveni)->Activate(Time+Exponential(1440));
-    }
+    void Behavior();
 };
