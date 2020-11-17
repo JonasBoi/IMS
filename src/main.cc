@@ -1,4 +1,232 @@
+#include "vyroba.h"
+#include "poruchy.h"
 #include "smeny.h"
+
+
+void HotovyVyrobek::Behavior() {
+    Seize(Kontrola);
+    Wait(tKontrola);
+    Release(Kontrola);
+    transakce++;
+}
+
+
+void Karkas::Behavior() {
+    //sklad pro vulkanizaci
+    Wait(360);
+
+    Seize(Vulkanizace);
+    Porucha();
+    Wait(tVulkanizace);
+    Release(Vulkanizace);
+
+    (new HotovyVyrobek)->Activate();
+}
+
+void Karkas::Porucha() {
+    if (poruchaVulkanizaceNastaveni) {
+        Wait(obsluhaNastav);
+        poruchaVulkanizaceNastaveni = false;
+    }
+    if (poruchaVulkanizaceUnik) {
+        Wait(obsluhaUnik);
+        poruchaVulkanizaceUnik = false;
+    }
+    if (poruchaVulkEl) {
+        Wait(obsluhaEl);
+        poruchaVulkEl = false;
+    }
+}
+
+
+void PolotovaryKonfekce::Behavior() {
+    Seize(Konfekce);
+    Porucha();
+    Wait(tKonfekce);
+    Release(Konfekce);
+
+    (new Karkas)->Activate();
+}
+
+void PolotovaryKonfekce::Porucha() {
+    if (poruchaKonfekceJine) {
+        Wait(obsluhaJine);
+        poruchaKonfekceJine = false;
+    }
+    if (poruchaKonfekceObsluha) {
+        Wait(obsluhaObsluha);
+        poruchaKonfekceObsluha = false;
+    }
+    if (poruchaKonfEl) {
+        Wait(obsluhaEl);
+        poruchaKonfEl = false;
+    }
+}
+
+
+void BeginKonfekce::Behavior() {
+    if (kordy > 0 && lana > 0 && behouny > 0 && bocnice > 0) {
+        kordy--; lana--; behouny--; bocnice--;
+        (new PolotovaryKonfekce)->Activate();
+    }
+}
+
+
+void PripravaBehoun::Behavior() {
+    // navezeni ze skladu
+    Wait(15);
+
+    Seize(ValcovnaBehoun);
+    Porucha();
+    Wait(tBehouny);
+    Release(ValcovnaBehoun);
+    Wait(1140);
+    
+    behouny++;
+    (new BeginKonfekce)->Activate();
+}
+
+void PripravaBehoun::Porucha() {
+    if (poruchaBehoun) {
+        Wait(obsluhaMech);
+        poruchaBehoun = false;
+    }
+    if (poruchaBehEl) {
+        Wait(obsluhaEl);
+        poruchaBehEl = false;
+    }
+}
+
+
+void PripravaBocnice::Behavior() {
+    // navezeni ze skladu
+    Wait(14);
+
+    Seize(ValcovnaBocnice);
+    Porucha();
+    Wait(tBocnice);
+    Release(ValcovnaBocnice);
+    Wait(1020);
+
+    bocnice++;
+    (new BeginKonfekce)->Activate();
+}
+
+void PripravaBocnice::Porucha() {
+    if (poruchaBocnice) {
+        Wait(obsluhaMech);
+        poruchaBocnice = false;
+    }
+    if (poruchaBocEl) {
+        Wait(obsluhaEl);
+        poruchaBocEl = false;
+    }
+}
+
+
+void PripravaKordu::Behavior() {
+    // navezeni ze skladu
+    Wait(18);
+
+    Seize(ValcovnaKordy);
+    Porucha();
+    Wait(tKordy);
+    Release(ValcovnaKordy);
+    Wait(1200);
+
+    kordy++;
+    (new BeginKonfekce)->Activate();
+}
+
+void PripravaKordu::Porucha() {
+    if (poruchaKordy) {
+        Wait(obsluhaMech);
+        poruchaKordy = false;
+    }
+    if (poruchaKordEl) {
+        Wait(obsluhaEl);
+        poruchaKordEl = false;
+    }
+}
+
+
+void PripravaLana::Behavior() {
+    // navezeni ze skladu
+    Wait(35);
+
+    Seize(ValcovnaLana);
+    Porucha();
+    Wait(tLana);
+    Release(ValcovnaLana);
+    Wait(1020);
+
+    lana++;
+    (new BeginKonfekce)->Activate();
+}
+
+void PripravaLana::Porucha() {
+    if (poruchaLana) {
+        Wait(obsluhaMech);
+        poruchaLana = false;
+    }
+    if (poruchaLanEl) {
+        Wait(obsluhaEl);
+        poruchaLanEl = false;
+    }
+}
+
+
+void SmesProValcovnu::Behavior() {
+    Wait(1440);
+
+    (new PripravaKordu)->Activate();
+    (new PripravaLana)->Activate();
+    (new PripravaBehoun)->Activate();
+    (new PripravaBocnice)->Activate();
+}
+
+void SurProDruhyStupen::Behavior() {
+    //cekani ve sklade
+    Wait(360);
+    Seize(Micharna2);
+    Porucha();
+    Wait(tMicharna2);
+    Release(Micharna2);
+
+    (new SmesProValcovnu)->Activate();
+}
+
+void SurProDruhyStupen::Porucha() {
+    if (poruchaMicharna2) {
+        Wait(obsluhaHWSW);
+        poruchaMicharna2 = false;
+    }
+    if (poruchaMichEl2) {
+        Wait(obsluhaEl);
+        poruchaMichEl2 = false;
+    }
+}
+
+void Suroviny::Behavior() {
+    Seize(Micharna1);
+    Porucha();
+    Wait(tMicharna1);
+    Release(Micharna1);
+
+    (new Suroviny)->Activate();
+    (new SurProDruhyStupen)->Activate();
+}
+
+void Suroviny::Porucha() {
+    if (poruchaMicharna1) {
+        Wait(obsluhaHWSW);
+        poruchaMicharna1 = false;
+    }
+    if (poruchaMichEl1) {
+        Wait(obsluhaEl);
+        poruchaMichEl1 = false;
+    }
+}
 
 
 void printStats() {
