@@ -672,7 +672,7 @@ void printStatsMini() {
     std::cout << "| VYUZITI LINEK                                            |\n";
     std::cout << "+----------------------------------------------------------+\n";
     std::cout << "Vyuziti Micharny 1. stupne: " << std::fixed << std::setprecision(3) << Micharna1.tstat.MeanValue()* 100 << "%\n";
-    std::cout << "Vyuziti Micharny 3. stupne: " << std::fixed << std::setprecision(3) << Micharna2.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Micharny 2. stupne: " << std::fixed << std::setprecision(3) << Micharna2.tstat.MeanValue()* 100 << "%\n";
     std::cout << "Vyuziti Valcovny Kordy: " << std::fixed << std::setprecision(3) << ValcovnaKordy.tstat.MeanValue()* 100 << "%\n";
     std::cout << "Vyuziti Valcovny Lana: " << std::fixed << std::setprecision(3) << ValcovnaLana.tstat.MeanValue()* 100 << "%\n";
     std::cout << "Vyuziti Valcovny Behouny: " << std::fixed << std::setprecision(3) << ValcovnaBehoun.tstat.MeanValue()* 100 << "%\n";
