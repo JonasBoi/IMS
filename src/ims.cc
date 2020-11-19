@@ -8,6 +8,7 @@
 #include <simlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <iomanip>
 
 // doby obsluhy poruch
 #define obsluhaHWSW 3.84
@@ -29,7 +30,10 @@ Facility Konfekce("Konfekce");
 Facility Vulkanizace("Vulkanizace");
 Facility Kontrola("Kontrola kvality");
 
-//casy behu linek
+// casy vystupu transakci
+std::vector <double> transactionExitTimes; 
+
+// casy behu linek
 double tMicharna1 = 266;
 double tMicharna2 = 193;
 double tKordy = 117;
@@ -367,11 +371,14 @@ class HotovyVyrobek : public Process {
         Seize(Kontrola);
         Wait(tKontrola);
         Release(Kontrola);
+
         transakce++;
+        transactionExitTimes.push_back(Time);
 
         if (transakce >= stopcount) {
             Stop();
         }
+
     }
 };
 
@@ -640,22 +647,48 @@ class Suroviny : public Process {
  * =====================================          funkce          ====================================
  */
 
+// statistiky o intervalu mezi vystupem dvou transakti ze systemu
+void printMeanValue(std::vector <double> values) {
+    int cnt = values.size();
+    double interval;
+    Stat intervals("=== Interval mezi vystupem dvou transakci ===");
+
+    intervals(values.at(0));
+
+    // ziskani intervalu ve kterych ktransakce opoustely system
+    for (int i = 1; i < cnt-1; i++) {
+
+        interval = values.at(i+1) - values.at(i);
+        intervals(interval);
+    }
+
+    intervals.Output();
+}
+
+
 // funkce pro minimalisticky prehled statistik
 void printStatsMini() {
-    std::cout << "Vyuziti Micharny 1. stupne: " + std::to_string(Micharna1.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Micharny 2. stupne: " + std::to_string(Micharna2.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Valcovny Kordy: " + std::to_string(ValcovnaKordy.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Valcovny Lana: " + std::to_string(ValcovnaLana.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Valcovny Behouny: " + std::to_string(ValcovnaBehoun.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Valcovny Bocnice: " + std::to_string(ValcovnaBocnice.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Konfekce: " + std::to_string(Konfekce.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Vulkanizace: " + std::to_string(Vulkanizace.tstat.MeanValue()) + "\n";
-    std::cout << "Vyuziti Kontroly: " + std::to_string(Kontrola.tstat.MeanValue()) + "\n";
+    std::cout << "+----------------------------------------------------------+\n";
+    std::cout << "| VYUZITI LINEK                                            |\n";
+    std::cout << "+----------------------------------------------------------+\n";
+    std::cout << "Vyuziti Micharny 1. stupne: " << std::fixed << std::setprecision(3) << Micharna1.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Micharny 3. stupne: " << std::fixed << std::setprecision(3) << Micharna2.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Valcovny Kordy: " << std::fixed << std::setprecision(3) << ValcovnaKordy.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Valcovny Lana: " << std::fixed << std::setprecision(3) << ValcovnaLana.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Valcovny Behouny: " << std::fixed << std::setprecision(3) << ValcovnaBehoun.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Valcovny Bocnice: " << std::fixed << std::setprecision(3) << ValcovnaBocnice.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Konfekce: " << std::fixed << std::setprecision(3) << Konfekce.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Vulkanizace: " << std::fixed << std::setprecision(3) << Vulkanizace.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "Vyuziti Kontroly: " << std::fixed << std::setprecision(3) << Kontrola.tstat.MeanValue()* 100 << "%\n";
+    std::cout << "+----------------------------------------------------------+\n";
+
     std::cout << "\nDokoncene transakce :" + std::to_string(transakce) + "\n";
 
     if (stopcount < INT32_MAX) {
         std::cout << "Cas dokonceni davky transakci: " << Time / 60 / 24 << " dní (" << Time << " minut).\n";
     }
+
+    printMeanValue(transactionExitTimes);
 }
 
 
@@ -741,11 +774,9 @@ void get_args(int argc, char *argv[], double *smenaMicharna1, double* smenaMicha
     int c;
     double val;
 
-    std::cout << "\n";
-
     while (1)
     {
-        c = getopt_long_only(argc,argv, "a:b:c:d:e:f:g:h:i:0vxt:s:", long_options, &opt_index);
+        c = getopt_long_only(argc,argv, "a:b:c:d:e:f:g:h:i:0vxt:s:j:k:l:m:n:o:p:q:r:", long_options, &opt_index);
 
         if(c == -1) //end of args
             break;
