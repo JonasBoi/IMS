@@ -665,7 +665,15 @@ void printMeanValue(std::vector <double> values) {
     intervals.Output();
 }
 
+void PrintMeanUtil() {
+    double mean = (Micharna1.tstat.MeanValue() + Micharna2.tstat.MeanValue() + ValcovnaKordy.tstat.MeanValue() + ValcovnaLana.tstat.MeanValue() + ValcovnaBehoun.tstat.MeanValue()\
+    + ValcovnaBocnice.tstat.MeanValue()+Konfekce.tstat.MeanValue()+Vulkanizace.tstat.MeanValue()+Kontrola.tstat.MeanValue()) ;
+    
+    mean = mean/9.0;
 
+    std::cout << "Prumerne celkove vyuziti: " << std::fixed << std::setprecision(3) << mean * 100 << "%\n";
+    std::cout << "+----------------------------------------------------------+\n";
+}
 // funkce pro minimalisticky prehled statistik
 void printStatsMini() {
     std::cout << "+----------------------------------------------------------+\n";
@@ -681,7 +689,9 @@ void printStatsMini() {
     std::cout << "Vyuziti Vulkanizace: " << std::fixed << std::setprecision(3) << Vulkanizace.tstat.MeanValue()* 100 << "%\n";
     std::cout << "Vyuziti Kontroly: " << std::fixed << std::setprecision(3) << Kontrola.tstat.MeanValue()* 100 << "%\n";
     std::cout << "+----------------------------------------------------------+\n";
-
+  
+    PrintMeanUtil();
+    
     std::cout << "\nDokoncene transakce :" + std::to_string(transakce) + "\n";
 
     if (stopcount < INT32_MAX) {
