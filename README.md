@@ -13,8 +13,8 @@ Modelujte jako SHO. Demonstrujte efektivitu výroby, úzká místa, hrozby apod.
 * diagramy_a_grafy - adresář s diagramy a grafy použitými v simulační studii
 
 ### Překlad a spuštění:
-make - překlad
-make run - základní bezparametrické spuštění
+* make - překlad
+* make run - základní bezparametrické spuštění
 
 #### spouštění s parametry:
 **./ims** [-help] [**-t** počet dní] [**-x**] [**-s** transakcí] [**-a...i** minut] [**-j...r** minut] [**-v**]
